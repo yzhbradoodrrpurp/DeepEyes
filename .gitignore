@@ -92,6 +92,13 @@ celerybeat-schedule
 
 # dotenv
 .env
+.deepeyes.env
+.hf.env
+.mimo.env
+.wandb.env
+.ssh_server.env
+.ssh_server*.env
+!.ssh_server.env.example
 
 # virtualenv
 venv/

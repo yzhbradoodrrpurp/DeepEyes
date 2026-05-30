@@ -279,7 +279,7 @@ def agent_rollout_loop(config, vllm_engine, vllm_inputs, prompts, multi_modal_in
     running_attn_masks = [mask[: max_total_length] for mask in running_attn_masks]
     attn_mask_tensor = pad_2d_list_to_length(running_attn_masks, 0, max_total_length).to(target_device)
 
-    if processor is not None and processor.image_processor.__class__.__name__ == "Qwen2VLImageProcessor":
+    if processor is not None and processor.image_processor.__class__.__name__.startswith("Qwen2VLImageProcessor"):
         # For Qwen-VL: (n*bs, 3, seq_len)
         position_ids_list = [
             get_rope_index(

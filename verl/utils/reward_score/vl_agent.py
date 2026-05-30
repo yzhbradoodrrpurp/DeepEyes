@@ -6,25 +6,79 @@ import os
 
 from math_verify import parse, verify
 
-openai_api_key = "EMPTY"
+DEFAULT_MIMO_BASE_URL = "https://api.xiaomimimo.com/v1"
+DEFAULT_MIMO_MODEL = "mimo-v2.5"
+
+
+def _env_first(*names, default=None):
+    for name in names:
+        value = os.environ.get(name)
+        if value:
+            return value
+    return default
+
+
+openai_api_key = _env_first(
+    "LLM_AS_A_JUDGE_API_KEY",
+    "MIMO_API_KEY",
+    "OPENAI_API_KEY",
+    default="EMPTY",
+)
+configured_judge_model = _env_first(
+    "LLM_AS_A_JUDGE_MODEL",
+    "MIMO_MODEL",
+)
 openai_api_base_list = [
-    # "http://172.30.52.123:8000/v1",
-    # "http://10.39.3.123:18901/v1",
-    os.environ.get("LLM_AS_A_JUDGE_BASE", "http://10.39.3.123:18901/v1"),
+    _env_first(
+        "LLM_AS_A_JUDGE_BASE",
+        "MIMO_BASE_URL",
+        default=DEFAULT_MIMO_BASE_URL,
+    ),
 ]
+
+
+def _request_headers():
+    if not openai_api_key or openai_api_key == "EMPTY":
+        return {}
+    # MiMo documents use api-key, while OpenAI-compatible services often accept Authorization.
+    return {
+        "Authorization": f"Bearer {openai_api_key}",
+        "api-key": openai_api_key,
+    }
+
+
+def _discover_model(api_base):
+    if configured_judge_model:
+        return configured_judge_model
+    try:
+        response = requests.get(f"{api_base.rstrip('/')}/models", headers=_request_headers(), timeout=15)
+        response.raise_for_status()
+        models = response.json()
+        data = models.get("data", [])
+        if data:
+            return data[0]["id"]
+    except Exception as err:
+        print(f" [WARNING] failed to discover judge model from {api_base}: {err}")
+    if "xiaomimimo.com" in api_base:
+        return DEFAULT_MIMO_MODEL
+    raise RuntimeError(
+        "Could not discover judge model. Set LLM_AS_A_JUDGE_MODEL or MIMO_MODEL explicitly."
+    )
 
 client_list = []
 for api_base in openai_api_base_list:
+    client_kwargs = {}
+    if openai_api_key and openai_api_key != "EMPTY":
+        client_kwargs["default_headers"] = {"api-key": openai_api_key}
     client = OpenAI(
         api_key=openai_api_key,
         base_url=api_base,
+        **client_kwargs,
     )
     client_list.append(client)
 model_name_list = []
-for client in client_list:
-    response = requests.get(f"{api_base}/models")
-    models = response.json()
-    model_name_list.append(models['data'][0]['id'])
+for api_base in openai_api_base_list:
+    model_name_list.append(_discover_model(api_base))
 
 
 

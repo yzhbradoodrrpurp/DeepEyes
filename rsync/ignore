@@ -1,0 +1,34 @@
+# Shared rsync exclude list. Patterns are matched relative to the rsync source
+# directory.
+
+.DS_Store
+.git/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.idea/
+
+# Runtime env files may be uploaded to trusted remote servers.
+# Keep local SSH connection credentials local-only.
+.ssh_server.env
+.ssh_server*.env
+
+# Local/private data and run artifacts. Dataset and parquet files are local by
+# default; upload explicit data paths separately when needed.
+dataset/
+**/data/
+*.parquet
+outputs/
+results/
+runs/
+checkpoints/
+logs/
+log/
+wandb/
+temp_download/
+temp_delete/
+temp*/
+temp_*/
